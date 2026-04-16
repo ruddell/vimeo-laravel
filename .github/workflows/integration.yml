@@ -1,0 +1,40 @@
+name: PHP Compatibility
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['7.4', '8.0', '8.2', '8.4']
+
+    name: PHP ${{ matrix.php }} (integration)
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: package
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+
+      - name: Create test app
+        run: |
+          mkdir test-app
+          echo '{"minimum-stability":"dev","prefer-stable":true,"require":{"vimeo/laravel":"*","illuminate/container":"*"},"repositories":[{"type":"path","url":"../package","options":{"symlink":false}}]}' > test-app/composer.json
+
+      - name: Install dependencies
+        working-directory: test-app
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      - name: Run smoke test
+        working-directory: test-app
+        run: php ../package/.github/smoke-test.php
